@@ -1,3 +1,1 @@
-# Subway Surfers 
-
-Built in WebGL
+ Webgl-boilerplate for Graphics Spring 2019
