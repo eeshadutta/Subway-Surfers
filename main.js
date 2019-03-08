@@ -6,25 +6,30 @@ var track3 = new Array();
 var wall = new Array();
 var city = new Array();
 var coins = new Array();
-var theme_flag = 1;
+var trainT = new Array();
+var trainF = new Array();
+var trainL = new Array();
+var trainR = new Array();
 
 var player_texture, police_texture;
 var track_texture;
 var wall_texture;
 var city_texture;
 var coin_texture;
+var trainF_texture, trainT_texture, trainL_texture, trainR_texture;
 
-var cam_x, cam_y, cam_z = 13.0;
-var theme = 1;
-
+var cam_x = 0, cam_y = 5, cam_z = 13.0;
 var d, startTime, policeCaughtUp;
+var theme = 1;
+var theme_flag = 1;
+
 var jump_height = 3;
+var train_speed = 0.2;
 
 var score = 0;
 var coins_collected = 0;
 
 var cubeRotation = 0;
-
 
 main();
 
@@ -36,41 +41,6 @@ function main() {
   d = new Date();
   startTime = d.getTime() * 0.001;
   policeCaughtUp = startTime;
-
-  for (var i = 0; i < 500; i += 1) {
-    wall.push(new Wall(gl, [0, 0, -i * 5]));
-    city.push(new City(gl, [0, 5, -i * 10]));
-  }
-
-  for (var i = 0; i < 1000; i += 1) {
-    track1.push(new Track(gl, [-6, 0, -i * 5]));
-    track2.push(new Track(gl, [0, 0, -i * 5]));
-    track3.push(new Track(gl, [6, 0, -i * 5]));
-  }
-
-  player = new Player(gl, [-6, -4, -4]);
-  police = new Police(gl, [-6, -4, 0]);
-
-  for (var i = 0; i < 50; i++) {
-    var j = Math.floor(Math.random() * 3);
-    var x, y, z;
-    if (j == 0)
-      x = -6;
-    else if (j == 1)
-      x = 0;
-    else
-      x = 6;
-    y = -4;
-    if (i == 0)
-      z = -30;
-    else
-      z = coins[coins.length - 1].pos[2] - (Math.random() * 30 - 15);
-    var num_coins = Math.floor(Math.random() * 5 + 5);
-    for (var k = 0; k < num_coins; k++) {
-      coins.push(new Coin(gl, [x, y, z]));
-      z -= 2.5;
-    }
-  }
 
   if (!gl) {
     alert('Unable to initialize WebGL. Your browser or machine may not support it.');
@@ -110,6 +80,10 @@ function main() {
   player_texture = loadTexture(gl, '1_Player.png');
   police_texture = loadTexture(gl, '1_Police.png');
   coin_texture = loadTexture(gl, '1_Coin.jpg');
+  trainF_texture = loadTexture(gl, '1_TrainF.jpg');
+  trainT_texture = loadTexture(gl, '1_TrainT.jpeg');
+  trainL_texture = loadTexture(gl, '1_TrainL.jpeg');
+  trainR_texture = loadTexture(gl, '1_TrainR.jpeg');
 
   const programInfo = {
     program: shaderProgram,
@@ -123,6 +97,61 @@ function main() {
       uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
     },
   };
+
+  for (var i = 0; i < 1000; i += 1) {
+    wall.push(new Wall(gl, [0, 0, -i * 5]));
+    city.push(new City(gl, [0, 5, -i * 10]));
+  }
+
+  for (var i = 0; i < 1000; i += 1) {
+    track1.push(new Track(gl, [-6, 0, -i * 5]));
+    track2.push(new Track(gl, [0, 0, -i * 5]));
+    track3.push(new Track(gl, [6, 0, -i * 5]));
+  }
+
+  player = new Player(gl, [-6, -4, -4]);
+  police = new Police(gl, [-6, -4, 0]);
+
+  for (var i = 0; i < 50; i++) {
+    var j = Math.floor(Math.random() * 3);
+    var x, y, z;
+    if (j == 0)
+      x = -6;
+    else if (j == 1)
+      x = 0;
+    else
+      x = 6;
+    y = -4;
+    if (i == 0)
+      z = -30;
+    else
+      z = coins[coins.length - 1].pos[2] - (Math.random() * 30 - 15);
+    var num_coins = Math.floor(Math.random() * 5 + 5);
+    for (var k = 0; k < num_coins; k++) {
+      coins.push(new Coin(gl, [x, y, z]));
+      z -= 2.5;
+    }
+  }
+
+  for (var i = 0; i < 40; i++) {
+    var x, y, z;
+    var j = Math.floor(Math.random() * 3);
+    if (j == 0)
+      x = -6;
+    else if (j == 1)
+      x = 0;
+    else
+      x = 6;
+    y = -4;
+    if (i == 0)
+      z = -40;
+    else
+      z = trainF[i - 1].pos[2] - (Math.random() * 100);
+    trainF.push(new Cube(gl, [x, y, z + 10], 6, 2, 0.1, trainF_texture));
+    trainT.push(new Cube(gl, [x, y + 3, z], 0.1, 2, 20, trainT_texture));
+    trainL.push(new Cube(gl, [x - 1, y, z], 6, 0.1, 20, trainL_texture));
+    trainR.push(new Cube(gl, [x + 1, y, z], 6, 0.1, 20, trainR_texture));
+  }
 
   var then = 0;
 
@@ -156,6 +185,14 @@ function main() {
     }
     police.pos[0] = player.pos[0];
 
+    var num_trains = trainF.length;
+    for (var i = 0; i < num_trains; i++) {
+      trainF[i].pos[2] += train_speed;
+      trainT[i].pos[2] += train_speed;
+      trainL[i].pos[2] += train_speed;
+      trainR[i].pos[2] += train_speed;
+    }
+
     var num_coins = coins.length;
     for (var i = 0; i < num_coins; i++) {
       if (coins[i].exist == true) {
@@ -170,9 +207,19 @@ function main() {
       }
     }
 
-    if (player.pos[2] <= -500) {
-      window.alert("YOU WON\nScore: " + score + "\nCoins: " + coins_collected);
+    for (var i = 0; i < num_trains; i++) {
+      if (player.pos[0] == trainF[i].pos[0]) {
+        if (player.pos[1] >= trainF[i].pos[1] - 4 && player.pos[1] <= trainF[i].pos[1] + 4) {
+          if (player.pos[2] >= trainF[i].pos[2] - 20 && player.pos[2] <= trainF[i].pos[2] + 1) {
+            console.log("Collision");
+          }
+        }
+      }
     }
+
+    // if (player.pos[2] <= -500) {
+    //   window.alert("YOU WON\nScore: " + score + "\nCoins: " + coins_collected);
+    // }
 
     drawScene(gl, programInfo, deltaTime);
     requestAnimationFrame(render);
@@ -190,6 +237,10 @@ function drawScene(gl, programInfo, deltaTime) {
       player_texture = loadTexture(gl, '1_Player.png');
       police_texture = loadTexture(gl, '1_Police.png');
       coin_texture = loadTexture(gl, '1_Coin.jpg');
+      trainF_texture = loadTexture(gl, '1_TrainF.jpg');
+      trainT_texture = loadTexture(gl, '1_TrainT.jpeg');
+      trainL_texture = loadTexture(gl, '1_TrainL.jpeg');
+      trainR_texture = loadTexture(gl, '1_TrainR.jpeg');
       gl.clearColor(144 / 256, 228 / 256, 252 / 256, 1.0);
     }
     if (theme == 2) {
@@ -199,6 +250,10 @@ function drawScene(gl, programInfo, deltaTime) {
       player_texture = loadTexture(gl, '1_Player.png');
       police_texture = loadTexture(gl, '1_Police.png');
       coin_texture = loadTexture(gl, '2_Coin.jpeg');
+      trainF_texture = loadTexture(gl, '1_TrainF.jpg');
+      trainT_texture = loadTexture(gl, '1_TrainT.jpeg');
+      trainL_texture = loadTexture(gl, '1_TrainL.jpg');
+      trainR_texture = loadTexture(gl, '1_TrainR.jpg');
       gl.clearColor(0, 0, 0, 1.0);
     }
     theme_flag = 0;
@@ -223,7 +278,7 @@ function drawScene(gl, programInfo, deltaTime) {
     zFar);
 
   var cameraMatrix = mat4.create();
-  mat4.translate(cameraMatrix, cameraMatrix, [0, 0, cam_z]);
+  mat4.translate(cameraMatrix, cameraMatrix, [cam_x, cam_y, cam_z]);
   var cameraPosition = [
     cameraMatrix[12],
     cameraMatrix[13],
@@ -241,7 +296,7 @@ function drawScene(gl, programInfo, deltaTime) {
 
   mat4.multiply(viewProjectionMatrix, projectionMatrix, viewMatrix);
 
-  for (var i = 0; i < 100; i += 1) {
+  for (var i = 0; i < 1000; i += 1) {
     track1[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
     track2[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
     track3[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
@@ -256,6 +311,14 @@ function drawScene(gl, programInfo, deltaTime) {
   for (var i = 0; i < num_coins; i++) {
     if (coins[i].exist == true)
       coins[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+  }
+
+  var num_trains = trainF.length;
+  for (var i = 0; i < num_trains; i++) {
+    trainF[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+    trainT[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+    trainL[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+    trainR[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
   }
 }
 
