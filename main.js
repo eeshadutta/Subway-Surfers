@@ -10,6 +10,11 @@ var trainT = new Array();
 var trainF = new Array();
 var trainL = new Array();
 var trainR = new Array();
+var boxes = new Array();
+var high_obs_stop = new Array();
+var high_obs_stand1 = new Array();
+var high_obs_stand2 = new Array();
+var low_obs = new Array();
 
 var player_texture, police_texture;
 var track_texture;
@@ -17,14 +22,22 @@ var wall_texture;
 var city_texture;
 var coin_texture;
 var trainF_texture, trainT_texture, trainL_texture, trainR_texture;
+var box_texture;
+var stop_texture, stand_texture;
 
 var cam_x = 0, cam_y = 5, cam_z = 13.0;
-var d, startTime, policeCaughtUp;
+var d, startTime, policeCaughtUp, obstacle_hit_time;
 var theme = 1;
 var theme_flag = 1;
+var obstacle_hit = -1;
 
-var jump_height = 3;
-var train_speed = 0.2;
+var jump_height = 0;
+var duck_ground = -5;
+var jumping = false;
+var ducking = false;
+var train_speeds = new Array();
+var positions = new Array();
+var player_speed = 0.5;
 
 var score = 0;
 var coins_collected = 0;
@@ -84,6 +97,9 @@ function main() {
   trainT_texture = loadTexture(gl, '1_TrainT.jpeg');
   trainL_texture = loadTexture(gl, '1_TrainL.jpeg');
   trainR_texture = loadTexture(gl, '1_TrainR.jpeg');
+  box_texture = loadTexture(gl, '1_Box.png');
+  stop_texture = loadTexture(gl, '1_Stop.jpg');
+  stand_texture = loadTexture(gl, '1_Stand.jpeg');
 
   const programInfo = {
     program: shaderProgram,
@@ -110,7 +126,9 @@ function main() {
   }
 
   player = new Player(gl, [-6, -4, -4]);
+  player.speedz = player_speed;
   police = new Police(gl, [-6, -4, 0]);
+  police.speedz = player_speed;
 
   for (var i = 0; i < 50; i++) {
     var j = Math.floor(Math.random() * 3);
@@ -133,7 +151,39 @@ function main() {
     }
   }
 
-  for (var i = 0; i < 40; i++) {
+  for (var i = 0; i < 10; i++) {
+    var x, y, z;
+    var j = Math.floor(Math.random() * 3);
+    if (j == 0)
+      x = -6;
+    else if (j == 1)
+      x = 0;
+    else
+      x = 6;
+    y = -4;
+    if (i == 0)
+      z = -70;
+    else
+      z = trainF[i - 1].pos[2] - (Math.random() * 100 + 80);
+    trainF.push(new Cube(gl, [x, y, z + 10], 10, 3, 0.1, trainF_texture));
+    trainT.push(new Cube(gl, [x, y + 5, z], 0.1, 3, 20, trainT_texture));
+    trainL.push(new Cube(gl, [x - 1.5, y, z], 10, 0.1, 20, trainL_texture));
+    trainR.push(new Cube(gl, [x + 1.5, y, z], 10, 0.1, 20, trainR_texture));
+
+    var train_speed;
+    var j = Math.floor(Math.random() * 3);
+    if (j == 0)
+      train_speed = 0.2;
+    else if (j == 1)
+      train_speed = 0.5;
+    else
+      train_speed = 0.7;
+    train_speeds.push(train_speed);
+    // for (var j = z - 10; j <= z + 10; j++)
+    // positions.push(j);
+  }
+
+  for (var i = 0; i < 10; i++) {
     var x, y, z;
     var j = Math.floor(Math.random() * 3);
     if (j == 0)
@@ -146,11 +196,33 @@ function main() {
     if (i == 0)
       z = -40;
     else
-      z = trainF[i - 1].pos[2] - (Math.random() * 100);
-    trainF.push(new Cube(gl, [x, y, z + 10], 6, 2, 0.1, trainF_texture));
-    trainT.push(new Cube(gl, [x, y + 3, z], 0.1, 2, 20, trainT_texture));
-    trainL.push(new Cube(gl, [x - 1, y, z], 6, 0.1, 20, trainL_texture));
-    trainR.push(new Cube(gl, [x + 1, y, z], 6, 0.1, 20, trainR_texture));
+      // while (positions.includes(z))
+      z = boxes[i - 1].pos[2] - (Math.random() * 40 + 80);
+
+    boxes.push(new Cube(gl, [x, y, z], 5, 5, 6, box_texture));
+
+    // for (var j = z - 6; j = z + 6; j++)
+    // positions.push(j);
+  }
+
+  for (var i = 0; i < 10; i++) {
+    var x, y, z;
+    var j = Math.floor(Math.random() * 3);
+    if (j == 0)
+      x = -6;
+    else if (j == 1)
+      x = 0;
+    else
+      x = 6;
+    y = 0;
+    if (i == 0)
+      z = -50;
+    else
+      z = high_obs_stop[i - 1].pos[2] - (Math.random() * 40 + 80);
+
+    high_obs_stop.push(new Stop(gl, [x, y, z], 7, 3, 0.1));
+    high_obs_stand1.push(new Stand(gl, [x + 1.5, y - 2, z], 6, 0.2, 0.1));
+    high_obs_stand2.push(new Stand(gl, [x - 1.5, y - 2, z], 6, 0.2, 0.1));
   }
 
   var then = 0;
@@ -160,39 +232,112 @@ function main() {
     const deltaTime = now - then;
     then = now;
 
+    d = new Date();
+    console.log(d.getTime() * 0.001 - obstacle_hit_time);
+    if (obstacle_hit != -1) {
+      if (d.getTime() * 0.001 - obstacle_hit_time >= 10) {
+        obstacle_hit = -1;
+        player.speedz = player_speed;
+        policeCaughtUp = d.getTime() * 0.001;
+      }
+    }
+
+    // move forward
     player.pos[2] -= player.speedz;
     cam_z -= player.speedz;
     d = new Date();
-    if (d.getTime() * 0.001 - policeCaughtUp >= 5)
-      police.speedz = player.speedz / 2;
+    if (d.getTime() * 0.001 - policeCaughtUp >= 5 && d.getTime() * 0.001 - policeCaughtUp <= 10)
+      police.speedz = player_speed / 2;
     else
-      police.speedz = player.speedz;
+      police.speedz = player_speed;
     police.pos[2] -= police.speedz
 
+    console.log(player.speedz, police.speedz);
     if (player.pos[0] > 6)
       player.pos[0] = 6;
     if (player.pos[0] < -6)
       player.pos[0] = -6;
-
-    if (player.pos[1] > -4) {
-      player.speedy += 0.01;
-      player.pos[1] -= player.speedy;
-      if (player.pos[1] < -4) {
-        player.pos[1] = -4;
-        player.speedy = 0.05;
-      }
-      police.pos[1] = player.pos[1];
-    }
     police.pos[0] = player.pos[0];
 
-    var num_trains = trainF.length;
-    for (var i = 0; i < num_trains; i++) {
-      trainF[i].pos[2] += train_speed;
-      trainT[i].pos[2] += train_speed;
-      trainL[i].pos[2] += train_speed;
-      trainR[i].pos[2] += train_speed;
+    // jump
+    if (jumping) {
+      player.pos[1] += player.speedy;
+      player.speedy -= 0.01;
+      police.pos[1] = player.pos[1];
+      if (player.pos[1] >= jump_height) {
+        player.pos[1] = jump_height;
+        jumping = false;
+        player.speedy = 0.05;
+      }
     }
 
+    if (jumping == false) {
+      if (player.pos[1] > -4) {
+        player.speedy += 0.02;
+        player.pos[1] -= player.speedy;
+        // jump onto train
+        var n = trainF.length;
+        for (var i = 0; i < n; i++) {
+          if (player.pos[0] == trainF[i].pos[0]) {
+            if (player.pos[1] <= trainT[i].pos[1] + 1) {
+              if (player.pos[2] <= trainF[i].pos[2] && player.pos[2] >= trainF[i].pos[2] - 20) {
+                player.pos[1] = trainT[i].pos[1] + 1;
+                break;
+              }
+            }
+          }
+        }
+        // jump onto box
+        n = boxes.length;
+        for (var i = 0; i < n; i++) {
+          if (player.pos[0] == boxes[i].pos[0]) {
+            if (player.pos[1] <= boxes[i].pos[1] + 3.5) {
+              if (player.pos[2] <= boxes[i].pos[2] + 3.5 && player.pos[2] >= boxes[i].pos[2] - 3.5) {
+                player.pos[1] = boxes[i].pos[1] + 3.5;
+                break;
+              }
+            }
+          }
+        }
+        if (player.pos[1] < -4 && !ducking) {
+          player.pos[1] = -4;
+          player.speedy = 0.05;
+        }
+        police.pos[1] = player.pos[1];
+      }
+    }
+
+    // duck
+    if (ducking) {
+      player.pos[1] -= player.speedy;
+      police.pos[1] = player.pos[1];
+      if (player.pos[1] <= duck_ground) {
+        ducking = false;
+        player.speedy = 0.05;
+      }
+    }
+
+    if (ducking == false) {
+      if (player.pos[1] < -4) {
+        player.pos[1] += player.speedy;
+        if (player.pos[1] > -4 && !jumping) {
+          player.pos[1] = -4;
+          player.speedy = 0.05;
+        }
+        police.pos[1] = player.pos[1];
+      }
+    }
+
+    // train movement
+    var num_trains = trainF.length;
+    for (var i = 0; i < num_trains; i++) {
+      trainF[i].pos[2] += train_speeds[i];
+      trainT[i].pos[2] += train_speeds[i];
+      trainL[i].pos[2] += train_speeds[i];
+      trainR[i].pos[2] += train_speeds[i];
+    }
+
+    // coins collecting
     var num_coins = coins.length;
     for (var i = 0; i < num_coins; i++) {
       if (coins[i].exist == true) {
@@ -207,18 +352,75 @@ function main() {
       }
     }
 
+    // collision with train
     for (var i = 0; i < num_trains; i++) {
       if (player.pos[0] == trainF[i].pos[0]) {
         if (player.pos[1] >= trainF[i].pos[1] - 4 && player.pos[1] <= trainF[i].pos[1] + 4) {
-          if (player.pos[2] >= trainF[i].pos[2] - 20 && player.pos[2] <= trainF[i].pos[2] + 1) {
-            console.log("Collision");
+          if (player.pos[2] >= trainF[i].pos[2] - 18 && player.pos[2] <= trainF[i].pos[2]) {
+            // alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
           }
         }
       }
     }
 
+    // collision with boxes
+    var num_boxes = boxes.length;
+    for (var i = 0; i < num_boxes; i++) {
+      if (player.pos[0] == boxes[i].pos[0]) {
+        if (player.pos[1] >= boxes[i].pos[1] - 2 && player.pos[1] <= boxes[i].pos[1] + 2) {
+          if (player.pos[2] <= boxes[i].pos[2] + 3 && player.pos[2] >= boxes[i].pos[2] - 3) {
+            // alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
+          }
+        }
+      }
+    }
+
+    // collision with high_obs
+    var num_high = high_obs_stop.length;
+    for (var i = 0; i < num_high; i++) {
+      if (i != obstacle_hit) {
+        if (player.pos[0] == high_obs_stop[i].pos[0]) {
+          if (player.pos[1] >= high_obs_stop[i].pos[1] - 4 && player.pos[1] <= high_obs_stop[i].pos[1] + 4) {
+            if (high_obs_stop[i].pos[2] >= player.pos[2] - 0.7 && high_obs_stop[i].pos[2] <= player.pos[2] + 0.7) {
+              d = new Date();
+              if (d.getTime() * 0.001 - policeCaughtUp <= 10) {
+                alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
+              }
+              else {
+                obstacle_hit = i;
+                player.speedz = player_speed / 2;
+                policeCaughtUp = d.getTime() * 0.001;
+                obstacle_hit_time = policeCaughtUp;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // train and box
+    for (var i = 0; i < num_trains; i++) {
+      for (var j = 0; j < num_boxes; j++) {
+        if (boxes[j].pos[0] == trainF[i].pos[0]) {
+          if (boxes[j].pos[2] - 5 <= trainF[i].pos[2] && boxes[j].pos[2] - 4.5 >= trainF[i].pos[2]) {
+            train_speeds[i] = 0;
+          }
+        }
+      }
+    }
+
+    // train and high_obs
+    for (var i = 0; i < num_trains; i++) {
+      for (var j = 0; j < num_high; j++) {
+        if (trainF[i].pos[0] == high_obs_stop[j].pos[0]) {
+          if (trainF[i].pos[2] >= high_obs_stop[j].pos[2] - 5 && trainF[i].pos[2] <= high_obs_stop[j].pos[2] - 4.5) {
+            train_speeds[i] = 0;
+          }
+        }
+      }
+    }
     // if (player.pos[2] <= -500) {
-    //   window.alert("YOU WON\nScore: " + score + "\nCoins: " + coins_collected);
+    //   alert("YOU WON\nScore: " + score + "\nCoins: " + coins_collected);
     // }
 
     drawScene(gl, programInfo, deltaTime);
@@ -241,6 +443,9 @@ function drawScene(gl, programInfo, deltaTime) {
       trainT_texture = loadTexture(gl, '1_TrainT.jpeg');
       trainL_texture = loadTexture(gl, '1_TrainL.jpeg');
       trainR_texture = loadTexture(gl, '1_TrainR.jpeg');
+      box_texture = loadTexture(gl, '1_Box.png');
+      stop_texture = loadTexture(gl, '1_Stop.jpg');
+      stand_texture = loadTexture(gl, '1_Stand.jpeg');
       gl.clearColor(144 / 256, 228 / 256, 252 / 256, 1.0);
     }
     if (theme == 2) {
@@ -254,6 +459,9 @@ function drawScene(gl, programInfo, deltaTime) {
       trainT_texture = loadTexture(gl, '1_TrainT.jpeg');
       trainL_texture = loadTexture(gl, '1_TrainL.jpg');
       trainR_texture = loadTexture(gl, '1_TrainR.jpg');
+      box_texture = loadTexture(gl, '1_Box.png');
+      stop_texture = loadTexture(gl, '2_Stop.jpg');
+      stand_texture = loadTexture(gl, '2_Stand.jpg');
       gl.clearColor(0, 0, 0, 1.0);
     }
     theme_flag = 0;
@@ -320,6 +528,18 @@ function drawScene(gl, programInfo, deltaTime) {
     trainL[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
     trainR[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
   }
+
+  var num_boxes = boxes.length;
+  for (var i = 0; i < num_boxes; i++) {
+    boxes[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+  }
+
+  var num_high = high_obs_stop.length;
+  for (var i = 0; i < num_high; i++) {
+    high_obs_stop[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+    high_obs_stand1[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+    high_obs_stand2[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+  }
 }
 
 function initShaderProgram(gl, vsSource, fsSource) {
@@ -350,7 +570,7 @@ function loadTexture(gl, url) {
   const border = 0;
   const srcFormat = gl.RGBA;
   const srcType = gl.UNSIGNED_BYTE;
-  const pixel = new Uint8Array([0, 0, 255, 255]);  // opaque blue
+  const pixel = new Uint8Array([0, 0, 255, 255]);
   gl.texImage2D(gl.TEXTURE_2D, level, internalFormat,
     width, height, border, srcFormat, srcType,
     pixel);

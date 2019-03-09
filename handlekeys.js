@@ -2,7 +2,6 @@ document.addEventListener(
     "keydown",
     event => {
         key = event.keyCode;
-        console.log(key);
         if (key == 39) {
             player.pos[0] += 6;
             police.pos[0] = player.pos[0];
@@ -12,10 +11,20 @@ document.addEventListener(
             police.pos[0] = player.pos[0];
         }
         if (key == 38) {
-            player.pos[1] += 4;
-            if (player.pos[1] > 3)
-                player.pos[1] = 3;
-            police.pos[1] = player.pos[1];
+            if (player.pos[1] < -4) {
+                player.pos[1] = -4;
+            }
+            jumping = true;
+            ducking = false;
+            player.speedy = 0.3;
+        }
+        if (key == 40) {
+            if (player.pos[1] != -4) {
+                player.pos[1] = -4;
+            }
+            ducking = true;
+            jumping = false;
+            player.speedy = 0.2;
         }
 
         if (key == 49) {

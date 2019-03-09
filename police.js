@@ -5,7 +5,7 @@ let Police = class {
         this.rotation = 0.0;
         this.speedx = 0;
         this.speedy = 0;
-        this.speedz = 0.1;
+        this.speedz = 0;
         this.pos = pos;
 
         this.positionBuffer = gl.createBuffer();
