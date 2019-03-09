@@ -26,7 +26,7 @@ var box_texture;
 var stop_texture, stand_texture;
 
 var cam_x = 0, cam_y = 5, cam_z = 13.0;
-var d, startTime, policeCaughtUp, obstacle_hit_time;
+var d, startTime, policeCaughtUp, obstacle_hit_time, flash_start_time;
 var theme = 1;
 var theme_flag = 1;
 var obstacle_hit = -1;
@@ -35,6 +35,8 @@ var jump_height = 0;
 var duck_ground = -5;
 var jumping = false;
 var ducking = false;
+var greyScale = false;
+var flashing = false;
 var train_speeds = new Array();
 var positions = new Array();
 var player_speed = 0.5;
@@ -61,31 +63,91 @@ function main() {
   }
 
   const vsSource = `
-    attribute vec4 aVertexPosition;
-    attribute vec2 aTextureCoord;
+  attribute vec4 aVertexPosition;
+  attribute vec3 aVertexNormal;
+  attribute vec2 aTextureCoord;
 
-    uniform mat4 uModelViewMatrix;
-    uniform mat4 uProjectionMatrix;
+  uniform mat4 uNormalMatrix;
+  uniform mat4 uModelViewMatrix;
+  uniform mat4 uProjectionMatrix;
 
-    varying highp vec2 vTextureCoord;
+  varying highp vec2 vTextureCoord;
+  varying highp vec3 vLighting;
 
-    void main(void) {
-      gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-      vTextureCoord = aTextureCoord;
-    }
-  `;
+  void main(void) {
+    gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+    vTextureCoord = aTextureCoord;
+
+    // Apply lighting effect
+
+    highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
+    highp vec3 directionalLightColor = vec3(1, 1, 1);
+    highp vec3 directionalVector = normalize(vec3(0.85, 0.8, 0.75));
+
+    highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
+
+    highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0);
+    vLighting = ambientLight + (directionalLightColor * directional);
+  }
+`;
+
+  const vsSourcehigh = `
+  attribute vec4 aVertexPosition;
+  attribute vec3 aVertexNormal;
+  attribute vec2 aTextureCoord;
+
+  uniform mat4 uNormalMatrix;
+  uniform mat4 uModelViewMatrix;
+  uniform mat4 uProjectionMatrix;
+
+  varying highp vec2 vTextureCoord;
+  varying highp vec3 vLighting;
+
+  void main(void) {
+  gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
+  vTextureCoord = aTextureCoord;
+
+  // Apply lighting effect
+
+  highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
+  highp vec3 directionalLightColor = vec3(1, 1, 1);
+  highp vec3 directionalVector = normalize(vec3(0.85, 0.8, 0.75));
+
+  highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
+
+  highp float directional = max(dot(transformedNormal.xyz, directionalVector), 1.0);
+  vLighting = ambientLight + (directionalLightColor * directional);
+}
+`;
 
   const fsSource = `
     varying highp vec2 vTextureCoord;
+    varying highp vec3 vLighting;
 
     uniform sampler2D uSampler;
 
     void main(void) {
-      gl_FragColor = texture2D(uSampler, vTextureCoord);
+      highp vec4 texelColor = texture2D(uSampler, vTextureCoord);
+
+      gl_FragColor = vec4(texelColor.rgb * vLighting, texelColor.a);
     }
   `;
 
+  const fsSourcebw = `
+  varying highp vec2 vTextureCoord;
+  varying highp vec3 vLighting;
+
+  uniform sampler2D uSampler;
+
+  void main(void) {
+    highp vec4 texelColor = texture2D(uSampler, vTextureCoord);
+
+    gl_FragColor = vec4(texelColor.rrr * vLighting, texelColor.a);
+  }`;
+
   const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
+  const shaderProgrambw = initShaderProgram(gl, vsSource, fsSourcebw);
+  const shaderProgramhigh = initShaderProgram(gl, vsSourcehigh, fsSource);
 
   track_texture = loadTexture(gl, '1_Track.jpg');
   wall_texture = loadTexture(gl, '1_Wall.jpg');
@@ -105,12 +167,45 @@ function main() {
     program: shaderProgram,
     attribLocations: {
       vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+      vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
       textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
     },
     uniformLocations: {
       projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
       modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+      normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
       uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+    },
+  };
+
+
+  const programInfobw = {
+    program: shaderProgrambw,
+    attribLocations: {
+      vertexPosition: gl.getAttribLocation(shaderProgrambw, 'aVertexPosition'),
+      vertexNormal: gl.getAttribLocation(shaderProgrambw, 'aVertexNormal'),
+      textureCoord: gl.getAttribLocation(shaderProgrambw, 'aTextureCoord'),
+    },
+    uniformLocations: {
+      projectionMatrix: gl.getUniformLocation(shaderProgrambw, 'uProjectionMatrix'),
+      modelViewMatrix: gl.getUniformLocation(shaderProgrambw, 'uModelViewMatrix'),
+      normalMatrix: gl.getUniformLocation(shaderProgrambw, 'uNormalMatrix'),
+      uSampler: gl.getUniformLocation(shaderProgrambw, 'uSampler'),
+    },
+  };
+
+  const programInfohigh = {
+    program: shaderProgramhigh,
+    attribLocations: {
+      vertexPosition: gl.getAttribLocation(shaderProgramhigh, 'aVertexPosition'),
+      vertexNormal: gl.getAttribLocation(shaderProgramhigh, 'aVertexNormal'),
+      textureCoord: gl.getAttribLocation(shaderProgramhigh, 'aTextureCoord'),
+    },
+    uniformLocations: {
+      projectionMatrix: gl.getUniformLocation(shaderProgramhigh, 'uProjectionMatrix'),
+      modelViewMatrix: gl.getUniformLocation(shaderProgramhigh, 'uModelViewMatrix'),
+      normalMatrix: gl.getUniformLocation(shaderProgramhigh, 'uNormalMatrix'),
+      uSampler: gl.getUniformLocation(shaderProgramhigh, 'uSampler'),
     },
   };
 
@@ -179,8 +274,6 @@ function main() {
     else
       train_speed = 0.7;
     train_speeds.push(train_speed);
-    // for (var j = z - 10; j <= z + 10; j++)
-    // positions.push(j);
   }
 
   for (var i = 0; i < 10; i++) {
@@ -196,13 +289,9 @@ function main() {
     if (i == 0)
       z = -40;
     else
-      // while (positions.includes(z))
       z = boxes[i - 1].pos[2] - (Math.random() * 40 + 80);
 
     boxes.push(new Cube(gl, [x, y, z], 5, 5, 6, box_texture));
-
-    // for (var j = z - 6; j = z + 6; j++)
-    // positions.push(j);
   }
 
   for (var i = 0; i < 10; i++) {
@@ -233,7 +322,6 @@ function main() {
     then = now;
 
     d = new Date();
-    console.log(d.getTime() * 0.001 - obstacle_hit_time);
     if (obstacle_hit != -1) {
       if (d.getTime() * 0.001 - obstacle_hit_time >= 10) {
         obstacle_hit = -1;
@@ -252,7 +340,6 @@ function main() {
       police.speedz = player_speed;
     police.pos[2] -= police.speedz
 
-    console.log(player.speedz, police.speedz);
     if (player.pos[0] > 6)
       player.pos[0] = 6;
     if (player.pos[0] < -6)
@@ -357,7 +444,7 @@ function main() {
       if (player.pos[0] == trainF[i].pos[0]) {
         if (player.pos[1] >= trainF[i].pos[1] - 4 && player.pos[1] <= trainF[i].pos[1] + 4) {
           if (player.pos[2] >= trainF[i].pos[2] - 18 && player.pos[2] <= trainF[i].pos[2]) {
-            // alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
+            alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
           }
         }
       }
@@ -369,7 +456,7 @@ function main() {
       if (player.pos[0] == boxes[i].pos[0]) {
         if (player.pos[1] >= boxes[i].pos[1] - 2 && player.pos[1] <= boxes[i].pos[1] + 2) {
           if (player.pos[2] <= boxes[i].pos[2] + 3 && player.pos[2] >= boxes[i].pos[2] - 3) {
-            // alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
+            alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
           }
         }
       }
@@ -423,7 +510,21 @@ function main() {
     //   alert("YOU WON\nScore: " + score + "\nCoins: " + coins_collected);
     // }
 
-    drawScene(gl, programInfo, deltaTime);
+    if (greyScale) {
+      drawScene(gl, programInfobw, deltaTime);
+    }
+    else if (flashing) {
+      d = new Date();
+      if (Math.floor(d.getTime() * 0.001 - flash_start_time) % 2 == 0) {
+        drawScene(gl, programInfo, deltaTime);
+      }
+      else {
+        drawScene(gl, programInfohigh, deltaTime);
+      }
+    }
+    else {
+      drawScene(gl, programInfo, deltaTime);
+    }
     requestAnimationFrame(render);
   }
   requestAnimationFrame(render);
@@ -497,8 +598,6 @@ function drawScene(gl, programInfo, deltaTime) {
   mat4.lookAt(cameraMatrix, cameraPosition, [0, 0, cam_z - 10], up);
 
   var viewMatrix = cameraMatrix;//mat4.create();
-
-  //mat4.invert(viewMatrix, cameraMatrix);
 
   var viewProjectionMatrix = mat4.create();
 

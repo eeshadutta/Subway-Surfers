@@ -35,6 +35,22 @@ document.addEventListener(
             theme = 2;
             theme_flag = 1;
         }
+
+        if (key == 70) {
+            if (flashing == false) {
+                flashing = true;
+                d = new Date();
+                flash_start_time = d.getTime() * 0.001;
+            }
+            else
+                flashing = false;
+        }
+        if (key == 71) {
+            if (greyScale == false)
+                greyScale = true;
+            else
+                greyScale = false
+        }
     },
     false
 );

@@ -46,8 +46,26 @@ let Wall = class {
         ];
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
 
+        const normalBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+        const vertexNormals = [
+            // Right
+            1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,
+            // Left
+            1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0,
+            1.0, 0.0, 0.0
+        ];
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormals), gl.STATIC_DRAW);
+
+
         this.buffer = {
             position: this.positionBuffer,
+            normal: normalBuffer,
             textureCoord: textureCoordBuffer,
             indices: indexBuffer,
         }
@@ -66,6 +84,10 @@ let Wall = class {
             modelViewMatrix,
             this.rotation,
             [1, 0, 0]);
+
+        const normalMatrix = mat4.create();
+        mat4.invert(normalMatrix, modelViewMatrix);
+        mat4.transpose(normalMatrix, normalMatrix);
 
         {
             const numComponents = 3;
@@ -103,6 +125,24 @@ let Wall = class {
                 programInfo.attribLocations.textureCoord);
         }
 
+        {
+            const numComponents = 3;
+            const type = gl.FLOAT;
+            const normalize = false;
+            const stride = 0;
+            const offset = 0;
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer.normal);
+            gl.vertexAttribPointer(
+                programInfo.attribLocations.vertexNormal,
+                numComponents,
+                type,
+                normalize,
+                stride,
+                offset);
+            gl.enableVertexAttribArray(
+                programInfo.attribLocations.vertexNormal);
+        }
+
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buffer.indices);
 
         gl.useProgram(programInfo.program);
@@ -115,6 +155,10 @@ let Wall = class {
             programInfo.uniformLocations.modelViewMatrix,
             false,
             modelViewMatrix);
+        gl.uniformMatrix4fv(
+            programInfo.uniformLocations.normalMatrix,
+            false,
+            normalMatrix);
 
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, wall_texture);
