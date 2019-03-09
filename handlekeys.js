@@ -39,6 +39,7 @@ document.addEventListener(
         if (key == 70) {
             if (flashing == false) {
                 flashing = true;
+                greyScale = false;
                 d = new Date();
                 flash_start_time = d.getTime() * 0.001;
             }
@@ -46,8 +47,10 @@ document.addEventListener(
                 flashing = false;
         }
         if (key == 71) {
-            if (greyScale == false)
+            if (greyScale == false) {
                 greyScale = true;
+                flashing = false;
+            }
             else
                 greyScale = false
         }

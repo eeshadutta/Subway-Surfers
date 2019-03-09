@@ -1,5 +1,6 @@
 var player;
 var police;
+var dog;
 var track1 = new Array();
 var track2 = new Array();
 var track3 = new Array();
@@ -11,12 +12,14 @@ var trainF = new Array();
 var trainL = new Array();
 var trainR = new Array();
 var boxes = new Array();
-var high_obs_stop = new Array();
-var high_obs_stand1 = new Array();
-var high_obs_stand2 = new Array();
-var low_obs = new Array();
+var duck_obs_stop = new Array();
+var duck_obs_stand1 = new Array();
+var duck_obs_stand2 = new Array();
+var jump_obs = new Array();
+var boots = new Array();
+var flying_boost = new Array();
 
-var player_texture, police_texture;
+var player_texture, police_texture, dog_texture;
 var track_texture;
 var wall_texture;
 var city_texture;
@@ -24,9 +27,12 @@ var coin_texture;
 var trainF_texture, trainT_texture, trainL_texture, trainR_texture;
 var box_texture;
 var stop_texture, stand_texture;
+var boots_texture;
+var fb_texture;
 
 var cam_x = 0, cam_y = 5, cam_z = 13.0;
-var d, startTime, policeCaughtUp, obstacle_hit_time, flash_start_time;
+var target_x = 0, target_y = 0, target_z = cam_z - 10;
+var d, startTime, policeCaughtUp, obstacle_hit_time, flash_start_time, boots_acquired, fb_acquired;
 var theme = 1;
 var theme_flag = 1;
 var obstacle_hit = -1;
@@ -162,6 +168,9 @@ function main() {
   box_texture = loadTexture(gl, '1_Box.png');
   stop_texture = loadTexture(gl, '1_Stop.jpg');
   stand_texture = loadTexture(gl, '1_Stand.jpeg');
+  boots_texture = loadTexture(gl, '1_Boots.jpeg');
+  fb_texture = loadTexture(gl, '1_FlyingBoost.jpeg');
+  dog_texture = loadTexture(gl, '1_Dog.jpeg');
 
   const programInfo = {
     program: shaderProgram,
@@ -177,7 +186,6 @@ function main() {
       uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
     },
   };
-
 
   const programInfobw = {
     program: shaderProgrambw,
@@ -224,6 +232,8 @@ function main() {
   player.speedz = player_speed;
   police = new Police(gl, [-6, -4, 0]);
   police.speedz = player_speed;
+  dog = new Dog(gl, [player.pos[0] + 2, -4.5, -2])
+  dog.speedz = player_speed;
 
   for (var i = 0; i < 50; i++) {
     var j = Math.floor(Math.random() * 3);
@@ -256,10 +266,7 @@ function main() {
     else
       x = 6;
     y = -4;
-    if (i == 0)
-      z = -70;
-    else
-      z = trainF[i - 1].pos[2] - (Math.random() * 100 + 80);
+    z = - (i + 1) * 79;
     trainF.push(new Cube(gl, [x, y, z + 10], 10, 3, 0.1, trainF_texture));
     trainT.push(new Cube(gl, [x, y + 5, z], 0.1, 3, 20, trainT_texture));
     trainL.push(new Cube(gl, [x - 1.5, y, z], 10, 0.1, 20, trainL_texture));
@@ -285,16 +292,12 @@ function main() {
       x = 0;
     else
       x = 6;
-    y = -4;
-    if (i == 0)
-      z = -40;
-    else
-      z = boxes[i - 1].pos[2] - (Math.random() * 40 + 80);
-
-    boxes.push(new Cube(gl, [x, y, z], 5, 5, 6, box_texture));
+    y = -3.4;
+    z = - i * 73 - 40;
+    boxes.push(new Box(gl, [x, y, z], 4, 5, 6));
   }
 
-  for (var i = 0; i < 10; i++) {
+  for (var i = 0; i < 20; i++) {
     var x, y, z;
     var j = Math.floor(Math.random() * 3);
     if (j == 0)
@@ -304,14 +307,52 @@ function main() {
     else
       x = 6;
     y = 0;
-    if (i == 0)
-      z = -50;
-    else
-      z = high_obs_stop[i - 1].pos[2] - (Math.random() * 40 + 80);
+    z = -i * 61 - 30
+    duck_obs_stop.push(new Stop(gl, [x, y, z], 7, 3, 0.1));
+    duck_obs_stand1.push(new Stand(gl, [x + 1.5, y - 2, z], 6, 0.2, 0.1));
+    duck_obs_stand2.push(new Stand(gl, [x - 1.5, y - 2, z], 6, 0.2, 0.1));
+  }
 
-    high_obs_stop.push(new Stop(gl, [x, y, z], 7, 3, 0.1));
-    high_obs_stand1.push(new Stand(gl, [x + 1.5, y - 2, z], 6, 0.2, 0.1));
-    high_obs_stand2.push(new Stand(gl, [x - 1.5, y - 2, z], 6, 0.2, 0.1));
+  for (var i = 0; i < 20; i++) {
+    var x, y, z;
+    var j = Math.floor(Math.random() * 3);
+    if (j == 0)
+      x = -6;
+    else if (j == 1)
+      x = 0;
+    else
+      x = 6;
+    y = -3;
+    z = -(i + 1) * 53;
+    jump_obs.push(new Stop(gl, [x, y, z], 3, 3, 1));
+  }
+
+  for (var i = 0; i < 5; i++) {
+    var x, y, z;
+    var j = Math.floor(Math.random() * 3);
+    if (j == 0)
+      x = -6;
+    else if (j == 1)
+      x = 0;
+    else
+      x = 6;
+    y = 0;
+    z = -(i + 1) * 103;
+    boots.push(new Boots(gl, [x, y, z], 1.5, 1.5, 1.5));
+  }
+
+  for (var i = 0; i < 5; i++) {
+    var x, y, z;
+    var j = Math.floor(Math.random() * 3);
+    if (j == 0)
+      x = -6;
+    else if (j == 1)
+      x = 0;
+    else
+      x = 6;
+    y = 0;
+    z = -i * 109 - 60;
+    flying_boost.push(new FlyingBoost(gl, [x, y, z], 1.5, 1.5, 1.5));
   }
 
   var then = 0;
@@ -330,9 +371,29 @@ function main() {
       }
     }
 
+    if (player.jumping_boots) {
+      if (d.getTime() * 0.001 - boots_acquired >= 10) {
+        player.jumping_boots = false;
+        jump_height = 0;
+        jumping = false;
+      }
+    }
+
+    if (player.fly_boost) {
+      if (d.getTime() * 0.001 - fb_acquired >= 10) {
+        player.fly_boost = false;
+        player.pos[1] = -4;
+        dog.pos[2] = player.pos[2] + 2;
+        cam_y = 5;
+        target_y = 0;
+        jumping = false;
+      }
+    }
+
     // move forward
     player.pos[2] -= player.speedz;
     cam_z -= player.speedz;
+    dog.pos[2] -= player.speedz;
     d = new Date();
     if (d.getTime() * 0.001 - policeCaughtUp >= 5 && d.getTime() * 0.001 - policeCaughtUp <= 10)
       police.speedz = player_speed / 2;
@@ -345,73 +406,76 @@ function main() {
     if (player.pos[0] < -6)
       player.pos[0] = -6;
     police.pos[0] = player.pos[0];
+    dog.pos[0] = player.pos[0] + 2;
 
-    // jump
-    if (jumping) {
-      player.pos[1] += player.speedy;
-      player.speedy -= 0.01;
-      police.pos[1] = player.pos[1];
-      if (player.pos[1] >= jump_height) {
-        player.pos[1] = jump_height;
-        jumping = false;
-        player.speedy = 0.05;
-      }
-    }
-
-    if (jumping == false) {
-      if (player.pos[1] > -4) {
-        player.speedy += 0.02;
-        player.pos[1] -= player.speedy;
-        // jump onto train
-        var n = trainF.length;
-        for (var i = 0; i < n; i++) {
-          if (player.pos[0] == trainF[i].pos[0]) {
-            if (player.pos[1] <= trainT[i].pos[1] + 1) {
-              if (player.pos[2] <= trainF[i].pos[2] && player.pos[2] >= trainF[i].pos[2] - 20) {
-                player.pos[1] = trainT[i].pos[1] + 1;
-                break;
-              }
-            }
-          }
-        }
-        // jump onto box
-        n = boxes.length;
-        for (var i = 0; i < n; i++) {
-          if (player.pos[0] == boxes[i].pos[0]) {
-            if (player.pos[1] <= boxes[i].pos[1] + 3.5) {
-              if (player.pos[2] <= boxes[i].pos[2] + 3.5 && player.pos[2] >= boxes[i].pos[2] - 3.5) {
-                player.pos[1] = boxes[i].pos[1] + 3.5;
-                break;
-              }
-            }
-          }
-        }
-        if (player.pos[1] < -4 && !ducking) {
-          player.pos[1] = -4;
-          player.speedy = 0.05;
-        }
-        police.pos[1] = player.pos[1];
-      }
-    }
-
-    // duck
-    if (ducking) {
-      player.pos[1] -= player.speedy;
-      police.pos[1] = player.pos[1];
-      if (player.pos[1] <= duck_ground) {
-        ducking = false;
-        player.speedy = 0.05;
-      }
-    }
-
-    if (ducking == false) {
-      if (player.pos[1] < -4) {
+    if (!player.fly_boost) {
+      // jump
+      if (jumping) {
         player.pos[1] += player.speedy;
-        if (player.pos[1] > -4 && !jumping) {
-          player.pos[1] = -4;
+        player.speedy -= 0.01;
+        police.pos[1] = player.pos[1];
+        if (player.pos[1] >= jump_height) {
+          player.pos[1] = jump_height;
+          jumping = false;
           player.speedy = 0.05;
         }
+      }
+
+      if (jumping == false) {
+        if (player.pos[1] > -4) {
+          player.speedy += 0.02;
+          player.pos[1] -= player.speedy;
+          // jump onto train
+          var n = trainF.length;
+          for (var i = 0; i < n; i++) {
+            if (player.pos[0] == trainF[i].pos[0]) {
+              if (player.pos[1] <= trainT[i].pos[1] + 1 && player.pos[1] >= trainT[i].pos[1]) {
+                if (player.pos[2] <= trainF[i].pos[2] && player.pos[2] >= trainF[i].pos[2] - 20) {
+                  player.pos[1] = trainT[i].pos[1] + 1;
+                  break;
+                }
+              }
+            }
+          }
+          // jump onto box
+          n = boxes.length;
+          for (var i = 0; i < n; i++) {
+            if (player.pos[0] == boxes[i].pos[0]) {
+              if (player.pos[1] <= boxes[i].pos[1] + 3.5) {
+                if (player.pos[2] <= boxes[i].pos[2] + 3.5 && player.pos[2] >= boxes[i].pos[2] - 3.5) {
+                  player.pos[1] = boxes[i].pos[1] + 3.5;
+                  break;
+                }
+              }
+            }
+          }
+          if (player.pos[1] < -4 && !ducking) {
+            player.pos[1] = -4;
+            player.speedy = 0;
+          }
+          police.pos[1] = player.pos[1];
+        }
+      }
+
+      // duck
+      if (ducking) {
+        player.pos[1] -= player.speedy;
         police.pos[1] = player.pos[1];
+        if (player.pos[1] <= duck_ground) {
+          ducking = false;
+          player.speedy = 0.05;
+        }
+      }
+
+      if (ducking == false) {
+        if (player.pos[1] < -4) {
+          player.pos[1] += player.speedy;
+          if (player.pos[1] > -4 && !jumping) {
+            player.pos[1] = -4;
+            player.speedy = 0.05;
+          }
+          police.pos[1] = player.pos[1];
+        }
       }
     }
 
@@ -462,13 +526,13 @@ function main() {
       }
     }
 
-    // collision with high_obs
-    var num_high = high_obs_stop.length;
+    // collision with duck_obs
+    var num_high = duck_obs_stop.length;
     for (var i = 0; i < num_high; i++) {
       if (i != obstacle_hit) {
-        if (player.pos[0] == high_obs_stop[i].pos[0]) {
-          if (player.pos[1] >= high_obs_stop[i].pos[1] - 4 && player.pos[1] <= high_obs_stop[i].pos[1] + 4) {
-            if (high_obs_stop[i].pos[2] >= player.pos[2] - 0.7 && high_obs_stop[i].pos[2] <= player.pos[2] + 0.7) {
+        if (player.pos[0] == duck_obs_stop[i].pos[0]) {
+          if (player.pos[1] >= duck_obs_stop[i].pos[1] - 4 && player.pos[1] <= duck_obs_stop[i].pos[1] + 4) {
+            if (duck_obs_stop[i].pos[2] >= player.pos[2] - 0.7 && duck_obs_stop[i].pos[2] <= player.pos[2] + 0.7) {
               d = new Date();
               if (d.getTime() * 0.001 - policeCaughtUp <= 10) {
                 alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
@@ -485,30 +549,126 @@ function main() {
       }
     }
 
-    // train and box
-    for (var i = 0; i < num_trains; i++) {
-      for (var j = 0; j < num_boxes; j++) {
-        if (boxes[j].pos[0] == trainF[i].pos[0]) {
-          if (boxes[j].pos[2] - 5 <= trainF[i].pos[2] && boxes[j].pos[2] - 4.5 >= trainF[i].pos[2]) {
-            train_speeds[i] = 0;
+    // collision with jump_obs
+    var num_low = jump_obs.length;
+    for (var i = 0; i < num_low; i++) {
+      if (i != obstacle_hit) {
+        if (player.pos[0] == jump_obs[i].pos[0]) {
+          if (player.pos[1] >= jump_obs[i].pos[1] - 2 && player.pos[1] <= jump_obs[i].pos[1] + 2) {
+            if (player.pos[2] <= jump_obs[i].pos[2] + 0.2 && player.pos[2] >= jump_obs[i].pos[2] - 0.2) {
+              d = new Date();
+              if (d.getTime() * 0.001 - policeCaughtUp <= 10) {
+                alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
+              }
+              else {
+                obstacle_hit = i;
+                player.speedz = player_speed / 2;
+                policeCaughtUp = d.getTime() * 0.001;
+                obstacle_hit_time = policeCaughtUp;
+              }
+            }
           }
         }
       }
     }
 
-    // train and high_obs
-    for (var i = 0; i < num_trains; i++) {
-      for (var j = 0; j < num_high; j++) {
-        if (trainF[i].pos[0] == high_obs_stop[j].pos[0]) {
-          if (trainF[i].pos[2] >= high_obs_stop[j].pos[2] - 5 && trainF[i].pos[2] <= high_obs_stop[j].pos[2] - 4.5) {
-            train_speeds[i] = 0;
+    // // train and box
+    // for (var i = 0; i < num_trains; i++) {
+    //   for (var j = 0; j < num_boxes; j++) {
+    //     if (boxes[j].pos[0] == trainF[i].pos[0]) {
+    //       if (boxes[j].pos[2] - 5 <= trainF[i].pos[2] && boxes[j].pos[2] - 4.5 >= trainF[i].pos[2]) {
+    //         train_speeds[i] = 0;
+    //       }
+    //     }
+    //   }
+    // }
+
+    // // train and duck_obs
+    // for (var i = 0; i < num_trains; i++) {
+    //   for (var j = 0; j < num_high; j++) {
+    //     if (trainF[i].pos[0] == duck_obs_stop[j].pos[0]) {
+    //       if (trainF[i].pos[2] >= duck_obs_stop[j].pos[2] - 5 && trainF[i].pos[2] <= duck_obs_stop[j].pos[2] - 4.5) {
+    //         train_speeds[i] = 0;
+    //       }
+    //     }
+    //   }
+    // }
+
+    // // train and jump_obs
+    // for (var i = 0; i < num_trains; i++) {
+    //   for (var j = 0; j < num_low; j++) {
+    //     if (trainF[i].pos[0] == jump_obs[j].pos[0]) {
+    //       if (trainF[i].pos[2] >= jump_obs[j].pos[2] - 5 && trainF[i].pos[2] <= jump_obs[j].pos[2] - 4.5) {
+    //         train_speeds[i] = 0;
+    //       }
+    //     }
+    //   }
+    // }
+
+    // collision with jumping boots
+    var num_boots = boots.length;
+    for (var i = 0; i < num_boots; i++) {
+      if (boots[i].exist) {
+        if (player.pos[0] == boots[i].pos[0]) {
+          if (player.pos[1] >= boots[i].pos[1] - 1.2 && player.pos[1] <= boots[i].pos[1] + 1.2) {
+            if (player.pos[2] >= boots[i].pos[2] - 1.2 && player.pos[2] <= boots[i].pos[2] + 1.2) {
+              boots[i].exist = false;
+              player.jumping_boots = true;
+              d = new Date();
+              boots_acquired = d.getTime() * 0.001;
+              jump_height = 3;
+              jumping = false;
+            }
           }
         }
       }
     }
-    // if (player.pos[2] <= -500) {
-    //   alert("YOU WON\nScore: " + score + "\nCoins: " + coins_collected);
-    // }
+
+    // collision with flying boost
+    var num_fb = flying_boost.length;
+    for (var i = 0; i < num_fb; i++) {
+      if (flying_boost[i].exist) {
+        if (player.pos[0] == flying_boost[i].pos[0]) {
+          if (player.pos[1] >= flying_boost[i].pos[1] - 1.75 && player.pos[1] <= flying_boost[i].pos[1] + 1.75) {
+            if (player.pos[2] >= flying_boost[i].pos[2] - 1.75 && player.pos[2] <= flying_boost[i].pos[2] + 1.75) {
+              flying_boost[i].exist = false;
+              player.fly_boost = true;
+              dog.pos[2] -= 10;
+              player.pos[1] = 10;
+              cam_y = player.pos[1] + 9;
+              target_y = player.pos[1] + 4;
+              d = new Date();
+              fb_acquired = d.getTime() * 0.001;
+              jumping = false;
+              // generate coins in air
+              var zi = flying_boost[i].pos[2] - 5;
+              var zf = zi - 70;
+              var c = 0;
+              var xc = player.pos[0];
+              var yc = player.pos[1];
+              while (zi >= zf) {
+                if (c == 10) {
+                  c = 0;
+                  if (xc == -6)
+                    xc = 0
+                  else if (xc == 0)
+                    xc = 6
+                  else
+                    x = -6;
+                }
+                coins.push(new Coin(gl, [xc, yc, zi]))
+                zi -= 2;
+                c += 1;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (player.pos[2] <= -800) {
+      alert("YOU WON\nScore: " + score + "\nCoins: " + coins_collected);
+    }
 
     if (greyScale) {
       drawScene(gl, programInfobw, deltaTime);
@@ -547,6 +707,9 @@ function drawScene(gl, programInfo, deltaTime) {
       box_texture = loadTexture(gl, '1_Box.png');
       stop_texture = loadTexture(gl, '1_Stop.jpg');
       stand_texture = loadTexture(gl, '1_Stand.jpeg');
+      boots_texture = loadTexture(gl, '1_Boots.jpeg');
+      fb_texture = loadTexture(gl, '1_FlyingBoost.jpeg');
+      dog_texture = loadTexture(gl, '1_Dog.jpeg');
       gl.clearColor(144 / 256, 228 / 256, 252 / 256, 1.0);
     }
     if (theme == 2) {
@@ -560,9 +723,12 @@ function drawScene(gl, programInfo, deltaTime) {
       trainT_texture = loadTexture(gl, '1_TrainT.jpeg');
       trainL_texture = loadTexture(gl, '1_TrainL.jpg');
       trainR_texture = loadTexture(gl, '1_TrainR.jpg');
-      box_texture = loadTexture(gl, '1_Box.png');
+      box_texture = loadTexture(gl, '2_Box.png');
       stop_texture = loadTexture(gl, '2_Stop.jpg');
       stand_texture = loadTexture(gl, '2_Stand.jpg');
+      boots_texture = loadTexture(gl, '2_Boots.jpg');
+      fb_texture = loadTexture(gl, '1_FlyingBoost.jpeg');
+      dog_texture = loadTexture(gl, '1_Dog.jpeg');
       gl.clearColor(0, 0, 0, 1.0);
     }
     theme_flag = 0;
@@ -595,7 +761,7 @@ function drawScene(gl, programInfo, deltaTime) {
   ];
   var up = [0, 1, 0];
 
-  mat4.lookAt(cameraMatrix, cameraPosition, [0, 0, cam_z - 10], up);
+  mat4.lookAt(cameraMatrix, cameraPosition, [target_x, target_y, cam_z - 10], up);
 
   var viewMatrix = cameraMatrix;//mat4.create();
 
@@ -612,8 +778,11 @@ function drawScene(gl, programInfo, deltaTime) {
     else if (theme == 2)
       wall[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
   }
+
   player.drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
   police.drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+  dog.drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+
   var num_coins = coins.length;
   for (var i = 0; i < num_coins; i++) {
     if (coins[i].exist == true)
@@ -633,11 +802,28 @@ function drawScene(gl, programInfo, deltaTime) {
     boxes[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
   }
 
-  var num_high = high_obs_stop.length;
+  var num_high = duck_obs_stop.length;
   for (var i = 0; i < num_high; i++) {
-    high_obs_stop[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
-    high_obs_stand1[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
-    high_obs_stand2[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+    duck_obs_stop[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+    duck_obs_stand1[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+    duck_obs_stand2[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+  }
+
+  var num_low = jump_obs.length;
+  for (var i = 0; i < num_low; i++) {
+    jump_obs[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+  }
+
+  var num_boots = boots.length;
+  for (var i = 0; i < num_boots; i++) {
+    if (boots[i].exist)
+      boots[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+  }
+
+  var num_boost = flying_boost.length;
+  for (var i = 0; i < num_boost; i++) {
+    if (flying_boost[i].exist)
+      flying_boost[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
   }
 }
 
