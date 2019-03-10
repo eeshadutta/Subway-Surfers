@@ -162,20 +162,20 @@ function main() {
   const shaderProgrambw = initShaderProgram(gl, vsSource, fsSourcebw);
   const shaderProgramhigh = initShaderProgram(gl, vsSourcehigh, fsSource);
 
-  track_texture = loadTexture(gl, '1_Track.jpg');
-  wall_texture = loadTexture(gl, '1_Wall.jpg');
-  city_texture = loadTexture(gl, '1_City.jpg');
-  player_texture = loadTexture(gl, '1_Player.jpeg');
-  police_texture = loadTexture(gl, '1_Police.png');
-  coin_texture = loadTexture(gl, '1_Coin.jpg');
-  train_texture = loadTexture(gl, '1_Train.jpeg');
-  box_texture = loadTexture(gl, '1_Box.png');
-  stop_texture = loadTexture(gl, '1_Stop.jpg');
-  stand_texture = loadTexture(gl, '1_Stand.jpeg');
-  boots_texture = loadTexture(gl, '1_Boots.jpeg');
-  fb_texture = loadTexture(gl, '1_FlyingBoost.jpeg');
-  hoverboard_texture = loadTexture(gl, '1_Hoverboard.jpeg');
-  dog_texture = loadTexture(gl, '1_Dog.jpeg');
+  track_texture = loadTexture(gl, 'assets/1_Track.jpg');
+  wall_texture = loadTexture(gl, 'assets/1_Wall.jpg');
+  city_texture = loadTexture(gl, 'assets/1_City.jpg');
+  player_texture = loadTexture(gl, 'assets/1_Player.jpeg');
+  police_texture = loadTexture(gl, 'assets/1_Police.png');
+  coin_texture = loadTexture(gl, 'assets/1_Coin.jpg');
+  train_texture = loadTexture(gl, 'assets/1_Train.jpeg');
+  box_texture = loadTexture(gl, 'assets/1_Box.png');
+  stop_texture = loadTexture(gl, 'assets/1_Stop.jpg');
+  stand_texture = loadTexture(gl, 'assets/1_Stand.jpeg');
+  boots_texture = loadTexture(gl, 'assets/1_Boots.jpeg');
+  fb_texture = loadTexture(gl, 'assets/1_FlyingBoost.jpeg');
+  hoverboard_texture = loadTexture(gl, 'assets/1_Hoverboard.jpeg');
+  dog_texture = loadTexture(gl, 'assets/1_Dog.jpeg');
 
   const programInfo = {
     program: shaderProgram,
@@ -709,8 +709,8 @@ function main() {
                     xc = 0
                   else if (xc == 0)
                     xc = 6
-                  else
-                    x = -6;
+                  else if (xc == 6)
+                    xc = -6;
                 }
                 coins.push(new Coin(gl, [xc, yc, zi]))
                 zi -= 2;
@@ -769,37 +769,37 @@ function drawScene(gl, programInfo, deltaTime) {
 
   if (theme_flag == 1) {
     if (theme == 1) {
-      track_texture = loadTexture(gl, '1_Track.jpg');
-      wall_texture = loadTexture(gl, '1_Wall.jpg');
-      city_texture = loadTexture(gl, '1_City.jpg');
-      player_texture = loadTexture(gl, '1_Player.jpeg');
-      police_texture = loadTexture(gl, '1_Police.png');
-      coin_texture = loadTexture(gl, '1_Coin.jpg');
-      train_texture = loadTexture(gl, '1_Train.jpeg');
-      box_texture = loadTexture(gl, '1_Box.png');
-      stop_texture = loadTexture(gl, '1_Stop.jpg');
-      stand_texture = loadTexture(gl, '1_Stand.jpeg');
-      boots_texture = loadTexture(gl, '1_Boots.jpeg');
-      fb_texture = loadTexture(gl, '1_FlyingBoost.jpeg');
-      hoverboard_texture = loadTexture(gl, '1_Hoverboard.jpeg');
-      dog_texture = loadTexture(gl, '1_Dog.jpeg');
+      track_texture = loadTexture(gl, 'assets/1_Track.jpg');
+      wall_texture = loadTexture(gl, 'assets/1_Wall.jpg');
+      city_texture = loadTexture(gl, 'assets/1_City.jpg');
+      player_texture = loadTexture(gl, 'assets/1_Player.jpeg');
+      police_texture = loadTexture(gl, 'assets/1_Police.png');
+      coin_texture = loadTexture(gl, 'assets/1_Coin.jpg');
+      train_texture = loadTexture(gl, 'assets/1_Train.jpeg');
+      box_texture = loadTexture(gl, 'assets/1_Box.png');
+      stop_texture = loadTexture(gl, 'assets/1_Stop.jpg');
+      stand_texture = loadTexture(gl, 'assets/1_Stand.jpeg');
+      boots_texture = loadTexture(gl, 'assets/1_Boots.jpeg');
+      fb_texture = loadTexture(gl, 'assets/1_FlyingBoost.jpeg');
+      hoverboard_texture = loadTexture(gl, 'assets/1_Hoverboard.jpeg');
+      dog_texture = loadTexture(gl, 'assets/1_Dog.jpeg');
       gl.clearColor(144 / 256, 228 / 256, 252 / 256, 1.0);
     }
     if (theme == 2) {
-      track_texture = loadTexture(gl, '2_Track.jpeg');
-      wall_texture = loadTexture(gl, '2_Wall.jpeg');
-      city_texture = loadTexture(gl, '2_City.jpg');
-      player_texture = loadTexture(gl, '2_Player.jpeg');
-      police_texture = loadTexture(gl, '2_Police.jpeg');
-      coin_texture = loadTexture(gl, '2_Coin.jpeg');
-      train_texture = loadTexture(gl, '2_Train.jpg');
-      box_texture = loadTexture(gl, '2_Box.jpg');
-      stop_texture = loadTexture(gl, '2_Stop.jpeg');
-      stand_texture = loadTexture(gl, '2_Stand.jpg');
-      boots_texture = loadTexture(gl, '2_Boots.jpg');
-      fb_texture = loadTexture(gl, '2_FlyingBoost.jpg');
-      hoverboard_texture = loadTexture(gl, '2_Hoverboard.jpg');
-      dog_texture = loadTexture(gl, '1_Dog.jpeg');
+      track_texture = loadTexture(gl, 'assets/2_Track.jpeg');
+      wall_texture = loadTexture(gl, 'assets/2_Wall.jpeg');
+      city_texture = loadTexture(gl, 'assets/2_City.jpg');
+      player_texture = loadTexture(gl, 'assets/2_Player.jpeg');
+      police_texture = loadTexture(gl, 'assets/2_Police.jpeg');
+      coin_texture = loadTexture(gl, 'assets/2_Coin.jpeg');
+      train_texture = loadTexture(gl, 'assets/2_Train.jpg');
+      box_texture = loadTexture(gl, 'assets/2_Box.jpg');
+      stop_texture = loadTexture(gl, 'assets/2_Stop.jpeg');
+      stand_texture = loadTexture(gl, 'assets/2_Stand.jpg');
+      boots_texture = loadTexture(gl, 'assets/2_Boots.jpg');
+      fb_texture = loadTexture(gl, 'assets/2_FlyingBoost.jpg');
+      hoverboard_texture = loadTexture(gl, 'assets/2_Hoverboard.jpg');
+      dog_texture = loadTexture(gl, 'assets/1_Dog.jpeg');
       gl.clearColor(0, 0, 0, 1.0);
     }
     theme_flag = 0;
