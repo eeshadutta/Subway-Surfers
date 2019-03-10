@@ -60,10 +60,10 @@ let Stop = class {
         gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
         const textureCoordinates = [
             // Front
-            0.0, 0.0,
-            1.0, 0.0,
-            1.0, 1.0,
             0.0, 1.0,
+            1.0, 1.0,
+            1.0, 0.0,
+            0.0, 0.0,
             // Back
             0.0, 0.0,
             1.0, 0.0,

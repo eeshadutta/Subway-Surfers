@@ -9,15 +9,15 @@ let Wall = class {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
         this.positions = [
             // Right face
-            -9.0, -5.0, 5.0,
-            -9.0, -5.0, -5.0,
-            -9.0, 5.0, -5.0,
-            -9.0, 5.0, 5.0,
+            -9.0, -10.0, 5.0,
+            -9.0, -10.0, -5.0,
+            -9.0, 10.0, -5.0,
+            -9.0, 10.0, 5.0,
             // Left face
-            9.0, -5.0, 5.0,
-            9.0, -5.0, -5.0,
-            9.0, 5.0, -5.0,
-            9.0, 5.0, 5.0,
+            9.0, -10.0, 5.0,
+            9.0, -10.0, -5.0,
+            9.0, 10.0, -5.0,
+            9.0, 10.0, 5.0,
         ];
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.positions), gl.STATIC_DRAW);
 

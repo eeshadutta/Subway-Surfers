@@ -16,8 +16,12 @@ var duck_obs_stop = new Array();
 var duck_obs_stand1 = new Array();
 var duck_obs_stand2 = new Array();
 var jump_obs = new Array();
+var rope_stand1 = new Array();
+var rope_stand2 = new Array();
+var rope_stop = new Array();
 var boots = new Array();
 var flying_boost = new Array();
+var hoverboard = new Array();
 
 var player_texture, police_texture, dog_texture;
 var track_texture;
@@ -29,10 +33,11 @@ var box_texture;
 var stop_texture, stand_texture;
 var boots_texture;
 var fb_texture;
+var hoverboard_texture;
 
 var cam_x = 0, cam_y = 5, cam_z = 13.0;
 var target_x = 0, target_y = 0, target_z = cam_z - 10;
-var d, startTime, policeCaughtUp, obstacle_hit_time, flash_start_time, boots_acquired, fb_acquired;
+var d, startTime, policeCaughtUp, obstacle_hit_time, flash_start_time, boots_acquired, fb_acquired, hoverboard_acquired;
 var theme = 1;
 var theme_flag = 1;
 var obstacle_hit = -1;
@@ -55,6 +60,8 @@ var cubeRotation = 0;
 main();
 
 function main() {
+
+  document.getElementById('music').play();
 
   const canvas = document.querySelector('#glcanvas');
   const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -158,18 +165,16 @@ function main() {
   track_texture = loadTexture(gl, '1_Track.jpg');
   wall_texture = loadTexture(gl, '1_Wall.jpg');
   city_texture = loadTexture(gl, '1_City.jpg');
-  player_texture = loadTexture(gl, '1_Player.png');
+  player_texture = loadTexture(gl, '1_Player.jpeg');
   police_texture = loadTexture(gl, '1_Police.png');
   coin_texture = loadTexture(gl, '1_Coin.jpg');
-  trainF_texture = loadTexture(gl, '1_TrainF.jpg');
-  trainT_texture = loadTexture(gl, '1_TrainT.jpeg');
-  trainL_texture = loadTexture(gl, '1_TrainL.jpeg');
-  trainR_texture = loadTexture(gl, '1_TrainR.jpeg');
+  train_texture = loadTexture(gl, '1_Train.jpeg');
   box_texture = loadTexture(gl, '1_Box.png');
   stop_texture = loadTexture(gl, '1_Stop.jpg');
   stand_texture = loadTexture(gl, '1_Stand.jpeg');
   boots_texture = loadTexture(gl, '1_Boots.jpeg');
   fb_texture = loadTexture(gl, '1_FlyingBoost.jpeg');
+  hoverboard_texture = loadTexture(gl, '1_Hoverboard.jpeg');
   dog_texture = loadTexture(gl, '1_Dog.jpeg');
 
   const programInfo = {
@@ -267,10 +272,10 @@ function main() {
       x = 6;
     y = -4;
     z = - (i + 1) * 79;
-    trainF.push(new Cube(gl, [x, y, z + 10], 10, 3, 0.1, trainF_texture));
-    trainT.push(new Cube(gl, [x, y + 5, z], 0.1, 3, 20, trainT_texture));
-    trainL.push(new Cube(gl, [x - 1.5, y, z], 10, 0.1, 20, trainL_texture));
-    trainR.push(new Cube(gl, [x + 1.5, y, z], 10, 0.1, 20, trainR_texture));
+    trainF.push(new Train(gl, [x, y, z + 10], 10, 3, 0.1));
+    trainT.push(new Train(gl, [x, y + 5, z], 0.1, 3, 20));
+    trainL.push(new Train(gl, [x - 1.5, y, z], 10, 0.1, 20));
+    trainR.push(new Train(gl, [x + 1.5, y, z], 10, 0.1, 20));
 
     var train_speed;
     var j = Math.floor(Math.random() * 3);
@@ -327,6 +332,15 @@ function main() {
     jump_obs.push(new Stop(gl, [x, y, z], 3, 3, 1));
   }
 
+  for (var i = 0; i < 6; i++) {
+    var x, y, z;
+    y = -3.5;
+    z = -(i + 1) * 127;
+    rope_stand1.push(new Stand(gl, [-8, y - 1, z], 2, 0.4, 0.1));
+    rope_stand2.push(new Stand(gl, [8, y - 1, z], 2, 0.4, 0.1));
+    rope_stop.push(new Stop(gl, [0, y, z], 0.3, 16, 0.1));
+  }
+
   for (var i = 0; i < 5; i++) {
     var x, y, z;
     var j = Math.floor(Math.random() * 3);
@@ -354,6 +368,9 @@ function main() {
     z = -i * 109 - 60;
     flying_boost.push(new FlyingBoost(gl, [x, y, z], 1.5, 1.5, 1.5));
   }
+
+  hoverboard.push(new Hoverboard(gl, [0, 0, -150], 1.5, 1.5, 1.5));
+  hoverboard.push(new Hoverboard(gl, [0, 0, -400], 1.5, 1.5, 1.5));
 
   var then = 0;
 
@@ -390,6 +407,13 @@ function main() {
       }
     }
 
+    if (player.hoverboard) {
+      if (d.getTime() * 0.001 - hoverboard_acquired >= 10) {
+        player.hoverboard = false;
+        jumping = false;
+      }
+    }
+
     // move forward
     player.pos[2] -= player.speedz;
     cam_z -= player.speedz;
@@ -406,6 +430,7 @@ function main() {
     if (player.pos[0] < -6)
       player.pos[0] = -6;
     police.pos[0] = player.pos[0];
+    police.pos[1] = player.pos[1];
     dog.pos[0] = player.pos[0] + 2;
 
     if (!player.fly_boost) {
@@ -503,61 +528,90 @@ function main() {
       }
     }
 
-    // collision with train
-    for (var i = 0; i < num_trains; i++) {
-      if (player.pos[0] == trainF[i].pos[0]) {
-        if (player.pos[1] >= trainF[i].pos[1] - 4 && player.pos[1] <= trainF[i].pos[1] + 4) {
-          if (player.pos[2] >= trainF[i].pos[2] - 18 && player.pos[2] <= trainF[i].pos[2]) {
-            alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
+    if (!player.hoverboard) {
+      // collision with train
+      for (var i = 0; i < num_trains; i++) {
+        if (player.pos[0] == trainF[i].pos[0]) {
+          if (player.pos[1] >= trainF[i].pos[1] - 4 && player.pos[1] <= trainF[i].pos[1] + 4) {
+            if (player.pos[2] >= trainF[i].pos[2] - 18 && player.pos[2] <= trainF[i].pos[2]) {
+              score = -player.pos[2] + coins_collected;
+              alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
+              Die();
+            }
           }
         }
       }
-    }
 
-    // collision with boxes
-    var num_boxes = boxes.length;
-    for (var i = 0; i < num_boxes; i++) {
-      if (player.pos[0] == boxes[i].pos[0]) {
-        if (player.pos[1] >= boxes[i].pos[1] - 2 && player.pos[1] <= boxes[i].pos[1] + 2) {
-          if (player.pos[2] <= boxes[i].pos[2] + 3 && player.pos[2] >= boxes[i].pos[2] - 3) {
-            alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
+      // collision with boxes
+      var num_boxes = boxes.length;
+      for (var i = 0; i < num_boxes; i++) {
+        if (player.pos[0] == boxes[i].pos[0]) {
+          if (player.pos[1] >= boxes[i].pos[1] - 2 && player.pos[1] <= boxes[i].pos[1] + 2) {
+            if (player.pos[2] <= boxes[i].pos[2] + 3 && player.pos[2] >= boxes[i].pos[2] - 3) {
+              score = -player.pos[2] + coins_collected;
+              alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
+              Die();
+            }
           }
         }
       }
-    }
 
-    // collision with duck_obs
-    var num_high = duck_obs_stop.length;
-    for (var i = 0; i < num_high; i++) {
-      if (i != obstacle_hit) {
-        if (player.pos[0] == duck_obs_stop[i].pos[0]) {
-          if (player.pos[1] >= duck_obs_stop[i].pos[1] - 4 && player.pos[1] <= duck_obs_stop[i].pos[1] + 4) {
-            if (duck_obs_stop[i].pos[2] >= player.pos[2] - 0.7 && duck_obs_stop[i].pos[2] <= player.pos[2] + 0.7) {
-              d = new Date();
-              if (d.getTime() * 0.001 - policeCaughtUp <= 10) {
-                alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
-              }
-              else {
-                obstacle_hit = i;
-                player.speedz = player_speed / 2;
-                policeCaughtUp = d.getTime() * 0.001;
-                obstacle_hit_time = policeCaughtUp;
+      // collision with duck_obs
+      var num_high = duck_obs_stop.length;
+      for (var i = 0; i < num_high; i++) {
+        if (i != obstacle_hit) {
+          if (player.pos[0] == duck_obs_stop[i].pos[0]) {
+            if (player.pos[1] >= duck_obs_stop[i].pos[1] - 4 && player.pos[1] <= duck_obs_stop[i].pos[1] + 4) {
+              if (duck_obs_stop[i].pos[2] >= player.pos[2] - 0.7 && duck_obs_stop[i].pos[2] <= player.pos[2] + 0.7) {
+                d = new Date();
+                if (d.getTime() * 0.001 - policeCaughtUp <= 10) {
+                  alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
+                }
+                else {
+                  obstacle_hit = i;
+                  player.speedz = player_speed / 2;
+                  policeCaughtUp = d.getTime() * 0.001;
+                  obstacle_hit_time = policeCaughtUp;
+                }
               }
             }
           }
         }
       }
-    }
 
-    // collision with jump_obs
-    var num_low = jump_obs.length;
-    for (var i = 0; i < num_low; i++) {
-      if (i != obstacle_hit) {
-        if (player.pos[0] == jump_obs[i].pos[0]) {
-          if (player.pos[1] >= jump_obs[i].pos[1] - 2 && player.pos[1] <= jump_obs[i].pos[1] + 2) {
-            if (player.pos[2] <= jump_obs[i].pos[2] + 0.2 && player.pos[2] >= jump_obs[i].pos[2] - 0.2) {
+      // collision with jump_obs
+      var num_low = jump_obs.length;
+      for (var i = 0; i < num_low; i++) {
+        if (i != obstacle_hit) {
+          if (player.pos[0] == jump_obs[i].pos[0]) {
+            if (player.pos[1] >= jump_obs[i].pos[1] - 2 && player.pos[1] <= jump_obs[i].pos[1] + 2) {
+              if (player.pos[2] <= jump_obs[i].pos[2] + 0.2 && player.pos[2] >= jump_obs[i].pos[2] - 0.2) {
+                d = new Date();
+                if (d.getTime() * 0.001 - policeCaughtUp <= 10) {
+                  score = -player.pos[2] + coins_collected;
+                  alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
+                }
+                else {
+                  obstacle_hit = i;
+                  player.speedz = player_speed / 2;
+                  policeCaughtUp = d.getTime() * 0.001;
+                  obstacle_hit_time = policeCaughtUp;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // collision with rope
+      var num_rope = rope_stop.length;
+      for (var i = 0; i < num_rope; i++) {
+        if (i != obstacle_hit) {
+          if (rope_stop[i].pos[1] <= player.pos[1] + 0.5 && rope_stop[i].pos[1] >= player.pos[1] - 0.5) {
+            if (player.pos[2] <= rope_stop[i].pos[2] + 0.02 && player.pos[2] >= rope_stop[i].pos[2] - 0.02) {
               d = new Date();
               if (d.getTime() * 0.001 - policeCaughtUp <= 10) {
+                score = -player.pos[2] + coins_collected;
                 alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
               }
               else {
@@ -609,6 +663,7 @@ function main() {
     var num_boots = boots.length;
     for (var i = 0; i < num_boots; i++) {
       if (boots[i].exist) {
+        boots[i].rotation += 0.3;
         if (player.pos[0] == boots[i].pos[0]) {
           if (player.pos[1] >= boots[i].pos[1] - 1.2 && player.pos[1] <= boots[i].pos[1] + 1.2) {
             if (player.pos[2] >= boots[i].pos[2] - 1.2 && player.pos[2] <= boots[i].pos[2] + 1.2) {
@@ -628,6 +683,7 @@ function main() {
     var num_fb = flying_boost.length;
     for (var i = 0; i < num_fb; i++) {
       if (flying_boost[i].exist) {
+        flying_boost[i].rotation += 0.1;
         if (player.pos[0] == flying_boost[i].pos[0]) {
           if (player.pos[1] >= flying_boost[i].pos[1] - 1.75 && player.pos[1] <= flying_boost[i].pos[1] + 1.75) {
             if (player.pos[2] >= flying_boost[i].pos[2] - 1.75 && player.pos[2] <= flying_boost[i].pos[2] + 1.75) {
@@ -666,7 +722,26 @@ function main() {
       }
     }
 
+    // collision with hoverboard
+    for (var i = 0; i < 2; i++) {
+      hoverboard[i].rotation += 0.2;
+      if (hoverboard[i].exist) {
+        if (player.pos[0] == hoverboard[i].pos[0]) {
+          if (player.pos[1] >= hoverboard[i].pos[1] - 1.2 && player.pos[1] <= hoverboard[i].pos[1] + 1.2) {
+            if (player.pos[2] >= hoverboard[i].pos[2] - 1.2 && player.pos[2] <= hoverboard[i].pos[2] + 1.2) {
+              hoverboard[i].exist = false;
+              player.hoverboard = true;
+              d = new Date();
+              hoverboard_acquired = d.getTime() * 0.001;
+              jumping = false;
+            }
+          }
+        }
+      }
+    }
+
     if (player.pos[2] <= -800) {
+      score = -player.pos[2] + coins_collected;
       alert("YOU WON\nScore: " + score + "\nCoins: " + coins_collected);
     }
 
@@ -697,18 +772,16 @@ function drawScene(gl, programInfo, deltaTime) {
       track_texture = loadTexture(gl, '1_Track.jpg');
       wall_texture = loadTexture(gl, '1_Wall.jpg');
       city_texture = loadTexture(gl, '1_City.jpg');
-      player_texture = loadTexture(gl, '1_Player.png');
+      player_texture = loadTexture(gl, '1_Player.jpeg');
       police_texture = loadTexture(gl, '1_Police.png');
       coin_texture = loadTexture(gl, '1_Coin.jpg');
-      trainF_texture = loadTexture(gl, '1_TrainF.jpg');
-      trainT_texture = loadTexture(gl, '1_TrainT.jpeg');
-      trainL_texture = loadTexture(gl, '1_TrainL.jpeg');
-      trainR_texture = loadTexture(gl, '1_TrainR.jpeg');
+      train_texture = loadTexture(gl, '1_Train.jpeg');
       box_texture = loadTexture(gl, '1_Box.png');
       stop_texture = loadTexture(gl, '1_Stop.jpg');
       stand_texture = loadTexture(gl, '1_Stand.jpeg');
       boots_texture = loadTexture(gl, '1_Boots.jpeg');
       fb_texture = loadTexture(gl, '1_FlyingBoost.jpeg');
+      hoverboard_texture = loadTexture(gl, '1_Hoverboard.jpeg');
       dog_texture = loadTexture(gl, '1_Dog.jpeg');
       gl.clearColor(144 / 256, 228 / 256, 252 / 256, 1.0);
     }
@@ -716,18 +789,16 @@ function drawScene(gl, programInfo, deltaTime) {
       track_texture = loadTexture(gl, '2_Track.jpeg');
       wall_texture = loadTexture(gl, '2_Wall.jpeg');
       city_texture = loadTexture(gl, '2_City.jpg');
-      player_texture = loadTexture(gl, '1_Player.png');
-      police_texture = loadTexture(gl, '1_Police.png');
+      player_texture = loadTexture(gl, '2_Player.jpeg');
+      police_texture = loadTexture(gl, '2_Police.jpeg');
       coin_texture = loadTexture(gl, '2_Coin.jpeg');
-      trainF_texture = loadTexture(gl, '1_TrainF.jpg');
-      trainT_texture = loadTexture(gl, '1_TrainT.jpeg');
-      trainL_texture = loadTexture(gl, '1_TrainL.jpg');
-      trainR_texture = loadTexture(gl, '1_TrainR.jpg');
-      box_texture = loadTexture(gl, '2_Box.png');
-      stop_texture = loadTexture(gl, '2_Stop.jpg');
+      train_texture = loadTexture(gl, '2_Train.jpg');
+      box_texture = loadTexture(gl, '2_Box.jpg');
+      stop_texture = loadTexture(gl, '2_Stop.jpeg');
       stand_texture = loadTexture(gl, '2_Stand.jpg');
       boots_texture = loadTexture(gl, '2_Boots.jpg');
-      fb_texture = loadTexture(gl, '1_FlyingBoost.jpeg');
+      fb_texture = loadTexture(gl, '2_FlyingBoost.jpg');
+      hoverboard_texture = loadTexture(gl, '2_Hoverboard.jpg');
       dog_texture = loadTexture(gl, '1_Dog.jpeg');
       gl.clearColor(0, 0, 0, 1.0);
     }
@@ -814,6 +885,13 @@ function drawScene(gl, programInfo, deltaTime) {
     jump_obs[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
   }
 
+  var num_rope = rope_stop.length;
+  for (var i = 0; i < num_rope; i++) {
+    rope_stand1[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+    rope_stand2[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+    rope_stop[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+  }
+
   var num_boots = boots.length;
   for (var i = 0; i < num_boots; i++) {
     if (boots[i].exist)
@@ -824,6 +902,11 @@ function drawScene(gl, programInfo, deltaTime) {
   for (var i = 0; i < num_boost; i++) {
     if (flying_boost[i].exist)
       flying_boost[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+  }
+
+  for (var i = 0; i < 2; i++) {
+    if (hoverboard[i].exist)
+      hoverboard[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
   }
 }
 
@@ -897,4 +980,9 @@ function loadShader(gl, type, source) {
   }
 
   return shader;
+}
+
+function Die() {
+  document.getElementById('music').pause();
+  document.getElementById('crash').play();
 }

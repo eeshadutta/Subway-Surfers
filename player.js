@@ -45,6 +45,7 @@ let Player = class {
         this.pos = pos;
         this.jumping_boots = false;
         this.fly_boost = false;
+        this.hoverboard = false;
 
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.positions), gl.STATIC_DRAW);
 

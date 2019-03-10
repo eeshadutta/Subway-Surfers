@@ -105,10 +105,10 @@ let FlyingBoost = class {
             1.0, 0.0,
             0.0, 0.0,
             // Back
-            0.0, 1.0,
             1.0, 1.0,
             1.0, 0.0,
             0.0, 0.0,
+            0.0, 1.0,
             // Top
             0.0, 1.0,
             1.0, 1.0,
@@ -120,10 +120,10 @@ let FlyingBoost = class {
             1.0, 0.0,
             0.0, 0.0,
             // Right
-            0.0, 1.0,
             1.0, 1.0,
             1.0, 0.0,
             0.0, 0.0,
+            0.0, 1.0,
             // Left
             0.0, 1.0,
             1.0, 1.0,
@@ -166,7 +166,7 @@ let FlyingBoost = class {
         mat4.rotate(modelViewMatrix,
             modelViewMatrix,
             this.rotation,
-            [1, 0, 0]);
+            [0, 1, 0]);
 
         const normalMatrix = mat4.create();
         mat4.invert(normalMatrix, modelViewMatrix);
