@@ -1,54 +1,122 @@
 /// <reference path="webgl.d.ts" />
 
-let Wall = class {
-    constructor(gl, pos) {
-        this.rotation = 0.0;
-        this.pos = pos;
-
+let Manhole = class {
+    constructor(gl, pos, h, w, b) {
         this.positionBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
+
         this.positions = [
-            // Right face
-            -9.0, -5.0, 5.0,
-            -9.0, -5.0, -5.0,
-            -9.0, 5.0, -5.0,
-            -9.0, 5.0, 5.0,
-            // Left face
-            9.0, -5.0, 5.0,
-            9.0, -5.0, -5.0,
-            9.0, 5.0, -5.0,
-            9.0, 5.0, 5.0,
+            // Front face
+            -w / 2, -h / 2, b / 2,
+            w / 2, -h / 2, b / 2,
+            w / 2, h / 2, b / 2,
+            -w / 2, h / 2, b / 2,
+            //Back Face
+            -w / 2, -h / 2, -b / 2,
+            w / 2, -h / 2, -b / 2,
+            w / 2, h / 2, -b / 2,
+            -w / 2, h / 2, -b / 2,
+            //Top Face
+            -w / 2, h / 2, -b / 2,
+            w / 2, h / 2, -b / 2,
+            w / 2, h / 2, b / 2,
+            -w / 2, h / 2, b / 2,
+            //Bottom Face
+            -w / 2, -h / 2, -b / 2,
+            w / 2, -h / 2, -b / 2,
+            w / 2, -h / 2, b / 2,
+            -w / 2, -h / 2, b / 2,
+            //Left Face
+            -w / 2, -h / 2, -b / 2,
+            -w / 2, h / 2, -b / 2,
+            -w / 2, h / 2, b / 2,
+            -w / 2, -h / 2, b / 2,
+            //Right Face
+            w / 2, -h / 2, -b / 2,
+            w / 2, h / 2, -b / 2,
+            w / 2, h / 2, b / 2,
+            w / 2, -h / 2, b / 2,
         ];
+
+        this.rotation = 0.0;
+        this.pos = pos;
+        this.exist = true;
+
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.positions), gl.STATIC_DRAW);
 
         const indexBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         const indices = [
-            0, 1, 2, 0, 2, 3, // right
-            4, 5, 6, 4, 6, 7, // left
+            0, 1, 2, 0, 2, 3, // front
+            4, 5, 6, 4, 6, 7,
+            8, 9, 10, 8, 10, 11,
+            12, 13, 14, 12, 14, 15,
+            16, 17, 18, 16, 18, 19,
+            20, 21, 22, 20, 22, 23,
         ];
+
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices), gl.STATIC_DRAW);
 
         const textureCoordBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
         const textureCoordinates = [
-            // Right
-            0.0, 0.0,
-            1.0, 0.0,
+            // Front
+            0.0, 1.0,
             1.0, 1.0,
+            1.0, 0.0,
+            0.0, 0.0,
+            // Back
+            1.0, 1.0,
+            1.0, 0.0,
+            0.0, 0.0,
+            0.0, 1.0,
+            // Top
+            0.0, 1.0,
+            1.0, 1.0,
+            1.0, 0.0,
+            0.0, 0.0,
+            // Bottom
+            0.0, 1.0,
+            1.0, 1.0,
+            1.0, 0.0,
+            0.0, 0.0,
+            // Right
+            1.0, 1.0,
+            1.0, 0.0,
+            0.0, 0.0,
             0.0, 1.0,
             // Left
-            0.0, 0.0,
-            1.0, 0.0,
-            1.0, 1.0,
             0.0, 1.0,
-
+            1.0, 1.0,
+            1.0, 0.0,
+            0.0, 0.0,
         ];
+
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureCoordinates), gl.STATIC_DRAW);
 
         const normalBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
         const vertexNormals = [
+            // Front
+            0.0, 0.0, 1.0,
+            0.0, 0.0, 1.0,
+            0.0, 0.0, 1.0,
+            0.0, 0.0, 1.0,
+            // Back
+            0.0, 0.0, -1.0,
+            0.0, 0.0, -1.0,
+            0.0, 0.0, -1.0,
+            0.0, 0.0, -1.0,
+            // Top
+            0.0, 1.0, 0.0,
+            0.0, 1.0, 0.0,
+            0.0, 1.0, 0.0,
+            0.0, 1.0, 0.0,
+            // Bottom
+            0.0, -1.0, 0.0,
+            0.0, -1.0, 0.0,
+            0.0, -1.0, 0.0,
+            0.0, -1.0, 0.0,
             // Right
             1.0, 0.0, 0.0,
             1.0, 0.0, 0.0,
@@ -62,14 +130,12 @@ let Wall = class {
         ];
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertexNormals), gl.STATIC_DRAW);
 
-
         this.buffer = {
             position: this.positionBuffer,
             normal: normalBuffer,
             textureCoord: textureCoordBuffer,
             indices: indexBuffer,
         }
-
     }
 
     drawCube(gl, projectionMatrix, programInfo, deltaTime) {
@@ -83,7 +149,7 @@ let Wall = class {
         mat4.rotate(modelViewMatrix,
             modelViewMatrix,
             this.rotation,
-            [1, 0, 0]);
+            [0, 1, 0]);
 
         const normalMatrix = mat4.create();
         mat4.invert(normalMatrix, modelViewMatrix);
@@ -161,11 +227,11 @@ let Wall = class {
             normalMatrix);
 
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, wall_texture);
+        gl.bindTexture(gl.TEXTURE_2D, manhole_texture);
         gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
         {
-            const vertexCount = 12;
+            const vertexCount = 36;
             const type = gl.UNSIGNED_SHORT;
             const offset = 0;
             gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);

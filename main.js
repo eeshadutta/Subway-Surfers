@@ -12,6 +12,7 @@ var trainF = new Array();
 var trainL = new Array();
 var trainR = new Array();
 var boxes = new Array();
+var manholes = new Array();
 var duck_obs_stop = new Array();
 var duck_obs_stand1 = new Array();
 var duck_obs_stand2 = new Array();
@@ -30,6 +31,7 @@ var city_texture;
 var coin_texture;
 var trainF_texture, trainT_texture, trainL_texture, trainR_texture;
 var box_texture;
+var manhole_texture;
 var stop_texture, stand_texture;
 var boots_texture;
 var fb_texture;
@@ -170,6 +172,7 @@ function main() {
   coin_texture = loadTexture(gl, 'assets/1_Coin.jpg');
   train_texture = loadTexture(gl, 'assets/1_Train.jpeg');
   box_texture = loadTexture(gl, 'assets/1_Box.png');
+  manhole_texture = loadTexture(gl, 'assets/1_Manhole.jpeg');
   stop_texture = loadTexture(gl, 'assets/1_Stop.jpg');
   stand_texture = loadTexture(gl, 'assets/1_Stand.jpeg');
   boots_texture = loadTexture(gl, 'assets/1_Boots.jpeg');
@@ -302,6 +305,20 @@ function main() {
     boxes.push(new Box(gl, [x, y, z], 4, 5, 6));
   }
 
+  for (var i = 0; i < 10; i++) {
+    var x, y, z;
+    var j = Math.floor(Math.random() * 3);
+    if (j == 0)
+      x = -6;
+    else if (j == 1)
+      x = 0;
+    else
+      x = 6;
+    y = -5.1;
+    z = - (i + 1) * 151;
+    manholes.push(new Manhole(gl, [x, y, z], 0.6, 4, 4));
+  }
+
   for (var i = 0; i < 20; i++) {
     var x, y, z;
     var j = Math.floor(Math.random() * 3);
@@ -365,7 +382,7 @@ function main() {
     else
       x = 6;
     y = 0;
-    z = -i * 109 - 60;
+    z = -i * 157 - 60;
     flying_boost.push(new FlyingBoost(gl, [x, y, z], 1.5, 1.5, 1.5));
   }
 
@@ -535,8 +552,8 @@ function main() {
           if (player.pos[1] >= trainF[i].pos[1] - 4 && player.pos[1] <= trainF[i].pos[1] + 4) {
             if (player.pos[2] >= trainF[i].pos[2] - 18 && player.pos[2] <= trainF[i].pos[2]) {
               score = -player.pos[2] + coins_collected;
-              alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
               Die();
+              alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
             }
           }
         }
@@ -549,8 +566,22 @@ function main() {
           if (player.pos[1] >= boxes[i].pos[1] - 2 && player.pos[1] <= boxes[i].pos[1] + 2) {
             if (player.pos[2] <= boxes[i].pos[2] + 3 && player.pos[2] >= boxes[i].pos[2] - 3) {
               score = -player.pos[2] + coins_collected;
-              alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
               Die();
+              alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
+            }
+          }
+        }
+      }
+
+      // collision with manholes
+      var num_manholes = manholes.length;
+      for (var i = 0; i < num_manholes; i++) {
+        if (player.pos[0] == manholes[i].pos[0]) {
+          if (player.pos[1] <= -4) {
+            if (player.pos[2] <= manholes[i].pos[2] + 2.3 && player.pos[2] >= manholes[i].pos[2] - 2.3) {
+              score = -player.pos[2] + coins_collected;
+              Die();
+              alert("YOU LOST\nScore: " + score + "\nCoins: " + coins_collected);
             }
           }
         }
@@ -777,6 +808,7 @@ function drawScene(gl, programInfo, deltaTime) {
       coin_texture = loadTexture(gl, 'assets/1_Coin.jpg');
       train_texture = loadTexture(gl, 'assets/1_Train.jpeg');
       box_texture = loadTexture(gl, 'assets/1_Box.png');
+      manhole_texture = loadTexture(gl, 'assets/1_Manhole.jpeg');
       stop_texture = loadTexture(gl, 'assets/1_Stop.jpg');
       stand_texture = loadTexture(gl, 'assets/1_Stand.jpeg');
       boots_texture = loadTexture(gl, 'assets/1_Boots.jpeg');
@@ -784,6 +816,8 @@ function drawScene(gl, programInfo, deltaTime) {
       hoverboard_texture = loadTexture(gl, 'assets/1_Hoverboard.jpeg');
       dog_texture = loadTexture(gl, 'assets/1_Dog.jpeg');
       gl.clearColor(144 / 256, 228 / 256, 252 / 256, 1.0);
+      if (greyScale)
+        gl.clearColor(50 / 255, 50 / 255, 50 / 255, 1.0); 
     }
     if (theme == 2) {
       track_texture = loadTexture(gl, 'assets/2_Track.jpeg');
@@ -794,6 +828,7 @@ function drawScene(gl, programInfo, deltaTime) {
       coin_texture = loadTexture(gl, 'assets/2_Coin.jpeg');
       train_texture = loadTexture(gl, 'assets/2_Train.jpg');
       box_texture = loadTexture(gl, 'assets/2_Box.jpg');
+      manhole_texture = loadTexture(gl, 'assets/2_Manhole.jpeg');
       stop_texture = loadTexture(gl, 'assets/2_Stop.jpeg');
       stand_texture = loadTexture(gl, 'assets/2_Stand.jpg');
       boots_texture = loadTexture(gl, 'assets/2_Boots.jpg');
@@ -871,6 +906,11 @@ function drawScene(gl, programInfo, deltaTime) {
   var num_boxes = boxes.length;
   for (var i = 0; i < num_boxes; i++) {
     boxes[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
+  }
+
+  var num_manholes = manholes.length;
+  for (var i = 0; i < num_manholes; i++) {
+    manholes[i].drawCube(gl, viewProjectionMatrix, programInfo, deltaTime);
   }
 
   var num_high = duck_obs_stop.length;

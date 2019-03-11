@@ -19,12 +19,14 @@ document.addEventListener(
             player.speedy = 0.3;
         }
         if (key == 40) {
-            if (player.pos[1] != -4) {
-                player.pos[1] = -4;
+            if (player.fly_boost == false) {
+                if (player.pos[1] != -4) {
+                    player.pos[1] = -4;
+                }
+                ducking = true;
+                jumping = false;
+                player.speedy = 0.2;
             }
-            ducking = true;
-            jumping = false;
-            player.speedy = 0.2;
         }
 
         if (key == 49) {
